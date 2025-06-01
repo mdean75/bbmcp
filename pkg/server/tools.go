@@ -218,7 +218,7 @@ func (s *MCPServer) handleToolsList(id interface{}) *types.MCPResponse {
 		},
 		{
 			Name:        "merge_pull_request",
-			Description: "Merge a pull request",
+			Description: "Merge a pull request (automatically fetches current version for optimistic locking)",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -234,17 +234,13 @@ func (s *MCPServer) handleToolsList(id interface{}) *types.MCPResponse {
 						"type":        "integer",
 						"description": "The pull request ID",
 					},
-					"version": map[string]interface{}{
-						"type":        "integer",
-						"description": "The pull request version for optimistic locking",
-					},
 				},
-				"required": []string{"project_key", "repo_slug", "pull_request_id", "version"},
+				"required": []string{"project_key", "repo_slug", "pull_request_id"},
 			},
 		},
 		{
 			Name:        "decline_pull_request",
-			Description: "Decline a pull request",
+			Description: "Decline a pull request (automatically fetches current version for optimistic locking)",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
@@ -260,12 +256,8 @@ func (s *MCPServer) handleToolsList(id interface{}) *types.MCPResponse {
 						"type":        "integer",
 						"description": "The pull request ID",
 					},
-					"version": map[string]interface{}{
-						"type":        "integer",
-						"description": "The pull request version for optimistic locking",
-					},
 				},
-				"required": []string{"project_key", "repo_slug", "pull_request_id", "version"},
+				"required": []string{"project_key", "repo_slug", "pull_request_id"},
 			},
 		},
 		{
