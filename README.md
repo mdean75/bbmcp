@@ -92,6 +92,7 @@ Add a comment to a pull request.
   - `to_hash`: Target commit hash
   - `src_path`: Source file path (for renames)
   - `dst_path`: Destination file path (for renames)
+  - `diff_type`: Diff type (EFFECTIVE, RANGE, COMMIT) - auto-set to RANGE when commit hashes provided
   - `orphaned_type`: Orphaned comment type
 
 ### create_pull_request

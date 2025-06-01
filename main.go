@@ -188,17 +188,17 @@ type Comment struct {
 	UpdatedDate         int64                  `json:"updatedDate"`
 	Comments            []Comment              `json:"comments"`
 	Tasks               []Task                 `json:"tasks"`
-	PermittedOperations []string               `json:"permittedOperations"`
+	PermittedOperations interface{}            `json:"permittedOperations"`
 }
 
 type Task struct {
-	Anchor              TaskAnchor `json:"anchor"`
-	Author              User       `json:"author"`
-	CreatedDate         int64      `json:"createdDate"`
-	ID                  int        `json:"id"`
-	PermittedOperations []string   `json:"permittedOperations"`
-	State               string     `json:"state"`
-	Text                string     `json:"text"`
+	Anchor              TaskAnchor  `json:"anchor"`
+	Author              User        `json:"author"`
+	CreatedDate         int64       `json:"createdDate"`
+	ID                  int         `json:"id"`
+	PermittedOperations interface{} `json:"permittedOperations"`
+	State               string      `json:"state"`
+	Text                string      `json:"text"`
 }
 
 type TaskAnchor struct {
@@ -222,6 +222,7 @@ type CommentAnchor struct {
 	ToHash       string `json:"toHash,omitempty"`
 	SrcPath      string `json:"srcPath,omitempty"`
 	DstPath      string `json:"dstPath,omitempty"`
+	DiffType     string `json:"diffType,omitempty"`
 	OrphanedType string `json:"orphanedType,omitempty"`
 }
 
@@ -1061,8 +1062,16 @@ func (s *MCPServer) handleCreatePullRequestComment(args map[string]interface{}) 
 			if dstPath, ok := anchorMap["dst_path"].(string); ok {
 				anchor.DstPath = dstPath
 			}
+			if diffType, ok := anchorMap["diff_type"].(string); ok {
+				anchor.DiffType = diffType
+			}
 			if orphanedType, ok := anchorMap["orphaned_type"].(string); ok {
 				anchor.OrphanedType = orphanedType
+			}
+
+			// Auto-set diffType when commit hashes are provided but diffType is not specified
+			if (anchor.FromHash != "" || anchor.ToHash != "") && anchor.DiffType == "" {
+				anchor.DiffType = "RANGE" // Default to RANGE when commit hashes are provided
 			}
 		}
 	}
@@ -1541,6 +1550,11 @@ func (s *MCPServer) handleToolsList(id interface{}) *MCPResponse {
 							"dst_path": map[string]interface{}{
 								"type":        "string",
 								"description": "Destination file path (for renames)",
+							},
+							"diff_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Diff type (EFFECTIVE, RANGE, COMMIT) - defaults to RANGE when commit hashes are provided",
+								"enum":        []string{"EFFECTIVE", "RANGE", "COMMIT"},
 							},
 							"orphaned_type": map[string]interface{}{
 								"type":        "string",
