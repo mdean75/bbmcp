@@ -957,32 +957,6 @@ func (s *MCPServer) handleRequest(request *MCPRequest) *MCPResponse {
 	}
 }
 
-func main() {
-	server := NewMCPServer()
-
-	// Read from stdin and write to stdout (STDIO transport)
-	decoder := json.NewDecoder(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
-
-	for {
-		var request MCPRequest
-		if err := decoder.Decode(&request); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Printf("Error decoding request: %v", err)
-			continue
-		}
-
-		response := server.handleRequest(&request)
-		response.ID = request.ID
-
-		if err := encoder.Encode(response); err != nil {
-			log.Printf("Error encoding response: %v", err)
-		}
-	}
-}
-
 func (s *MCPServer) handleToolsList() *MCPResponse {
 	tools := []Tool{
 		{
@@ -1201,5 +1175,31 @@ func (s *MCPServer) handleToolsList() *MCPResponse {
 	return &MCPResponse{
 		JSONRPC: "2.0",
 		Result:  result,
+	}
+}
+
+func main() {
+	server := NewMCPServer()
+
+	// Read from stdin and write to stdout (STDIO transport)
+	decoder := json.NewDecoder(os.Stdin)
+	encoder := json.NewEncoder(os.Stdout)
+
+	for {
+		var request MCPRequest
+		if err := decoder.Decode(&request); err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.Printf("Error decoding request: %v", err)
+			continue
+		}
+
+		response := server.handleRequest(&request)
+		response.ID = request.ID
+
+		if err := encoder.Encode(response); err != nil {
+			log.Printf("Error encoding response: %v", err)
+		}
 	}
 }
