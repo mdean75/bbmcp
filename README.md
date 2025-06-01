@@ -2,6 +2,27 @@
 
 A Model Context Protocol (MCP) server that provides tools for interacting with Bitbucket Server pull requests.
 
+## Project Structure
+
+The project is organized into the following packages for better maintainability:
+
+```
+bbcli/
+├── main.go                     # Application entry point
+├── pkg/
+│   ├── types/                  # MCP protocol types
+│   │   └── mcp.go             # MCP request/response structures
+│   ├── bitbucket/             # Bitbucket API client
+│   │   ├── types.go           # Bitbucket API data structures
+│   │   └── client.go          # HTTP client for Bitbucket Server API
+│   └── server/                # MCP server implementation
+│       ├── server.go          # Main server struct and initialization
+│       ├── handlers.go        # Tool handler implementations
+│       └── tools.go           # Tool definitions and request routing
+├── go.mod
+└── README.md
+```
+
 ## Features
 
 - List pull requests for a repository
@@ -92,6 +113,7 @@ Add a comment to a pull request.
   - `to_hash`: Target commit hash
   - `src_path`: Source file path (for renames)
   - `dst_path`: Destination file path (for renames)
+  - `diff_type`: Diff type (EFFECTIVE, RANGE, COMMIT) - auto-set to RANGE when commit hashes provided
   - `orphaned_type`: Orphaned comment type
 
 ### create_pull_request
