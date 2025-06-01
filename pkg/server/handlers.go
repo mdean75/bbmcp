@@ -319,12 +319,13 @@ func (s *MCPServer) handleMergePullRequest(args map[string]interface{}) *types.M
 		return s.errorResponse(-32602, "pull_request_id is required and must be an integer")
 	}
 
-	version, ok := args["version"].(float64)
-	if !ok {
-		return s.errorResponse(-32602, "version is required and must be an integer")
+	// Get current PR to obtain the latest version for optimistic locking
+	currentPR, err := s.bitbucket.GetPullRequest(projectKey, repoSlug, int(pullRequestID))
+	if err != nil {
+		return s.errorResponse(-32000, fmt.Sprintf("Failed to get current pull request version: %v", err))
 	}
 
-	mergedPR, err := s.bitbucket.MergePullRequest(projectKey, repoSlug, int(pullRequestID), int(version))
+	mergedPR, err := s.bitbucket.MergePullRequest(projectKey, repoSlug, int(pullRequestID), currentPR.Version)
 	if err != nil {
 		return s.errorResponse(-32000, fmt.Sprintf("Failed to merge pull request: %v", err))
 	}
@@ -365,12 +366,13 @@ func (s *MCPServer) handleDeclinePullRequest(args map[string]interface{}) *types
 		return s.errorResponse(-32602, "pull_request_id is required and must be an integer")
 	}
 
-	version, ok := args["version"].(float64)
-	if !ok {
-		return s.errorResponse(-32602, "version is required and must be an integer")
+	// Get current PR to obtain the latest version for optimistic locking
+	currentPR, err := s.bitbucket.GetPullRequest(projectKey, repoSlug, int(pullRequestID))
+	if err != nil {
+		return s.errorResponse(-32000, fmt.Sprintf("Failed to get current pull request version: %v", err))
 	}
 
-	declinedPR, err := s.bitbucket.DeclinePullRequest(projectKey, repoSlug, int(pullRequestID), int(version))
+	declinedPR, err := s.bitbucket.DeclinePullRequest(projectKey, repoSlug, int(pullRequestID), currentPR.Version)
 	if err != nil {
 		return s.errorResponse(-32000, fmt.Sprintf("Failed to decline pull request: %v", err))
 	}
