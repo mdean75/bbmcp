@@ -213,6 +213,18 @@ type TaskAnchor struct {
 	Properties map[string]interface{} `json:"properties"`
 }
 
+type CommentAnchor struct {
+	Line         int    `json:"line,omitempty"`
+	LineType     string `json:"lineType,omitempty"`
+	Path         string `json:"path,omitempty"`
+	FileType     string `json:"fileType,omitempty"`
+	FromHash     string `json:"fromHash,omitempty"`
+	ToHash       string `json:"toHash,omitempty"`
+	SrcPath      string `json:"srcPath,omitempty"`
+	DstPath      string `json:"dstPath,omitempty"`
+	OrphanedType string `json:"orphanedType,omitempty"`
+}
+
 type CommitList struct {
 	Values     []Commit `json:"values"`
 	Size       int      `json:"size"`
@@ -452,6 +464,85 @@ func (bs *BitbucketServer) DeclinePullRequest(projectKey, repoSlug string, pullR
 	return &declinedPR, nil
 }
 
+func (bs *BitbucketServer) GetPullRequestDiff(projectKey, repoSlug string, pullRequestID int, contextLines int, whitespace string, since string, until string) (string, error) {
+	endpoint := fmt.Sprintf("/projects/%s/repos/%s/pull-requests/%d/diff", projectKey, repoSlug, pullRequestID)
+
+	// Add query parameters if provided
+	params := []string{}
+	if contextLines > 0 {
+		params = append(params, fmt.Sprintf("contextLines=%d", contextLines))
+	}
+	if whitespace != "" {
+		params = append(params, fmt.Sprintf("whitespace=%s", whitespace))
+	}
+	if since != "" {
+		params = append(params, fmt.Sprintf("since=%s", since))
+	}
+	if until != "" {
+		params = append(params, fmt.Sprintf("until=%s", until))
+	}
+
+	if len(params) > 0 {
+		endpoint += "?" + strings.Join(params, "&")
+	}
+
+	resp, err := bs.makeRequest("GET", endpoint, nil)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	// Read the raw diff content as text
+	diffBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(diffBytes), nil
+}
+
+func (bs *BitbucketServer) CreatePullRequestComment(projectKey, repoSlug string, pullRequestID int, text string, anchor *CommentAnchor) (*Comment, error) {
+	endpoint := fmt.Sprintf("/projects/%s/repos/%s/pull-requests/%d/comments", projectKey, repoSlug, pullRequestID)
+
+	// Create the comment request body
+	commentRequest := map[string]interface{}{
+		"text": text,
+	}
+
+	// Add anchor if provided (for inline comments)
+	if anchor != nil {
+		commentRequest["anchor"] = anchor
+	}
+
+	jsonData, err := json.Marshal(commentRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := bs.makeRequest("POST", endpoint, strings.NewReader(string(jsonData)))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("API request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var comment Comment
+	if err := json.NewDecoder(resp.Body).Decode(&comment); err != nil {
+		return nil, err
+	}
+
+	return &comment, nil
+}
+
 // MCPServer implements the Model Context Protocol
 type MCPServer struct {
 	bitbucket *BitbucketServer
@@ -473,7 +564,7 @@ func NewMCPServer() *MCPServer {
 	}
 }
 
-func (s *MCPServer) handleInitialize(params InitializeParams) *MCPResponse {
+func (s *MCPServer) handleInitialize(params InitializeParams, id interface{}) *MCPResponse {
 	result := InitializeResult{
 		ProtocolVersion: "2024-11-05",
 		Capabilities: ServerCapabilities{
@@ -489,30 +580,38 @@ func (s *MCPServer) handleInitialize(params InitializeParams) *MCPResponse {
 
 	return &MCPResponse{
 		JSONRPC: "2.0",
+		ID:      id,
 		Result:  result,
 	}
 }
 
-func (s *MCPServer) handleCallTool(params CallToolParams) *MCPResponse {
+func (s *MCPServer) handleCallTool(params CallToolParams, id interface{}) *MCPResponse {
+	var response *MCPResponse
 	switch params.Name {
 	case "list_pull_requests":
-		return s.handleListPullRequests(params.Arguments)
+		response = s.handleListPullRequests(params.Arguments)
 	case "get_pull_request":
-		return s.handleGetPullRequest(params.Arguments)
+		response = s.handleGetPullRequest(params.Arguments)
 	case "get_pull_request_activity":
-		return s.handleGetPullRequestActivity(params.Arguments)
+		response = s.handleGetPullRequestActivity(params.Arguments)
 	case "create_pull_request":
-		return s.handleCreatePullRequest(params.Arguments)
+		response = s.handleCreatePullRequest(params.Arguments)
 	case "approve_pull_request":
-		return s.handleApprovePullRequest(params.Arguments)
+		response = s.handleApprovePullRequest(params.Arguments)
 	case "unapprove_pull_request":
-		return s.handleUnapprovePullRequest(params.Arguments)
+		response = s.handleUnapprovePullRequest(params.Arguments)
 	case "merge_pull_request":
-		return s.handleMergePullRequest(params.Arguments)
+		response = s.handleMergePullRequest(params.Arguments)
 	case "decline_pull_request":
-		return s.handleDeclinePullRequest(params.Arguments)
+		response = s.handleDeclinePullRequest(params.Arguments)
+	case "hello_world":
+		response = s.handleHelloWorld(params.Arguments)
+	case "get_pull_request_diff":
+		response = s.handleGetPullRequestDiff(params.Arguments)
+	case "create_pull_request_comment":
+		response = s.handleCreatePullRequestComment(params.Arguments)
 	default:
-		return &MCPResponse{
+		response = &MCPResponse{
 			JSONRPC: "2.0",
 			Error: &MCPError{
 				Code:    -32601,
@@ -520,6 +619,8 @@ func (s *MCPServer) handleCallTool(params CallToolParams) *MCPResponse {
 			},
 		}
 	}
+	response.ID = id
+	return response
 }
 
 func (s *MCPServer) handleListPullRequests(args map[string]interface{}) *MCPResponse {
@@ -909,6 +1010,166 @@ func (s *MCPServer) handleDeclinePullRequest(args map[string]interface{}) *MCPRe
 	}
 }
 
+func (s *MCPServer) handleCreatePullRequestComment(args map[string]interface{}) *MCPResponse {
+	projectKey, ok := args["project_key"].(string)
+	if !ok {
+		return s.errorResponse(-32602, "project_key is required and must be a string")
+	}
+
+	repoSlug, ok := args["repo_slug"].(string)
+	if !ok {
+		return s.errorResponse(-32602, "repo_slug is required and must be a string")
+	}
+
+	pullRequestID, ok := args["pull_request_id"].(float64)
+	if !ok {
+		return s.errorResponse(-32602, "pull_request_id is required and must be an integer")
+	}
+
+	text, ok := args["text"].(string)
+	if !ok {
+		return s.errorResponse(-32602, "text is required and must be a string")
+	}
+
+	// Optional anchor for inline comments
+	var anchor *CommentAnchor
+	if anchorData, ok := args["anchor"]; ok {
+		if anchorMap, ok := anchorData.(map[string]interface{}); ok {
+			anchor = &CommentAnchor{}
+
+			if line, ok := anchorMap["line"].(float64); ok {
+				anchor.Line = int(line)
+			}
+			if lineType, ok := anchorMap["line_type"].(string); ok {
+				anchor.LineType = lineType
+			}
+			if path, ok := anchorMap["path"].(string); ok {
+				anchor.Path = path
+			}
+			if fileType, ok := anchorMap["file_type"].(string); ok {
+				anchor.FileType = fileType
+			}
+			if fromHash, ok := anchorMap["from_hash"].(string); ok {
+				anchor.FromHash = fromHash
+			}
+			if toHash, ok := anchorMap["to_hash"].(string); ok {
+				anchor.ToHash = toHash
+			}
+			if srcPath, ok := anchorMap["src_path"].(string); ok {
+				anchor.SrcPath = srcPath
+			}
+			if dstPath, ok := anchorMap["dst_path"].(string); ok {
+				anchor.DstPath = dstPath
+			}
+			if orphanedType, ok := anchorMap["orphaned_type"].(string); ok {
+				anchor.OrphanedType = orphanedType
+			}
+		}
+	}
+
+	comment, err := s.bitbucket.CreatePullRequestComment(projectKey, repoSlug, int(pullRequestID), text, anchor)
+	if err != nil {
+		return s.errorResponse(-32000, fmt.Sprintf("Failed to create pull request comment: %v", err))
+	}
+
+	content, err := json.MarshalIndent(comment, "", "  ")
+	if err != nil {
+		return s.errorResponse(-32000, fmt.Sprintf("Failed to marshal response: %v", err))
+	}
+
+	result := CallToolResult{
+		Content: []ToolContent{
+			{
+				Type: "text",
+				Text: string(content),
+			},
+		},
+	}
+
+	return &MCPResponse{
+		JSONRPC: "2.0",
+		Result:  result,
+	}
+}
+
+func (s *MCPServer) handleGetPullRequestDiff(args map[string]interface{}) *MCPResponse {
+	projectKey, ok := args["project_key"].(string)
+	if !ok {
+		return s.errorResponse(-32602, "project_key is required and must be a string")
+	}
+
+	repoSlug, ok := args["repo_slug"].(string)
+	if !ok {
+		return s.errorResponse(-32602, "repo_slug is required and must be a string")
+	}
+
+	pullRequestID, ok := args["pull_request_id"].(float64)
+	if !ok {
+		return s.errorResponse(-32602, "pull_request_id is required and must be an integer")
+	}
+
+	// Optional parameters
+	contextLines := 0
+	if contextVal, ok := args["context_lines"].(float64); ok {
+		contextLines = int(contextVal)
+	}
+
+	whitespace := ""
+	if whitespaceVal, ok := args["whitespace"].(string); ok {
+		whitespace = whitespaceVal
+	}
+
+	since := ""
+	if sinceVal, ok := args["since"].(string); ok {
+		since = sinceVal
+	}
+
+	until := ""
+	if untilVal, ok := args["until"].(string); ok {
+		until = untilVal
+	}
+
+	diff, err := s.bitbucket.GetPullRequestDiff(projectKey, repoSlug, int(pullRequestID), contextLines, whitespace, since, until)
+	if err != nil {
+		return s.errorResponse(-32000, fmt.Sprintf("Failed to get pull request diff: %v", err))
+	}
+
+	result := CallToolResult{
+		Content: []ToolContent{
+			{
+				Type: "text",
+				Text: diff,
+			},
+		},
+	}
+
+	return &MCPResponse{
+		JSONRPC: "2.0",
+		Result:  result,
+	}
+}
+
+func (s *MCPServer) handleHelloWorld(args map[string]interface{}) *MCPResponse {
+	name := "World"
+	if nameVal, ok := args["name"].(string); ok && nameVal != "" {
+		name = nameVal
+	}
+
+	result := CallToolResult{
+		Content: []ToolContent{
+			{
+				Type: "text",
+				Text: fmt.Sprintf("Hello, %s!", name),
+			},
+		},
+	}
+
+	return &MCPResponse{
+		JSONRPC: "2.0",
+		Result:  result,
+	}
+}
+
 func (s *MCPServer) errorResponse(code int, message string) *MCPResponse {
 	return &MCPResponse{
 		JSONRPC: "2.0",
@@ -928,36 +1189,48 @@ func (s *MCPServer) handleRequest(request *MCPRequest) *MCPResponse {
 				json.Unmarshal(paramsBytes, &params)
 			}
 		}
-		return s.handleInitialize(params)
+		return s.handleInitialize(params, request.ID)
 
-	case "initialized":
-		// No-op for initialized notification
-		return &MCPResponse{
-			JSONRPC: "2.0",
-			ID:      request.ID,
-			Result:  map[string]interface{}{},
-		}
+	case "notifications/initialized":
+		// No response for notifications
+		return nil
 
 	case "tools/list":
-		return s.handleToolsList()
+		return s.handleToolsList(request.ID)
 
 	case "tools/call":
 		var params CallToolParams
 		if request.Params != nil {
 			if paramsBytes, err := json.Marshal(request.Params); err == nil {
 				if err := json.Unmarshal(paramsBytes, &params); err != nil {
-					return s.errorResponse(-32602, "Invalid parameters")
+					response := s.errorResponse(-32602, "Invalid parameters")
+					response.ID = request.ID
+					return response
 				}
 			}
 		}
-		return s.handleCallTool(params)
+		return s.handleCallTool(params, request.ID)
+
+	case "resources/list":
+		// Not implemented but return proper error
+		response := s.errorResponse(-32601, "Method not found")
+		response.ID = request.ID
+		return response
+
+	case "prompts/list":
+		// Not implemented but return proper error
+		response := s.errorResponse(-32601, "Method not found")
+		response.ID = request.ID
+		return response
 
 	default:
-		return s.errorResponse(-32601, "Method not found")
+		response := s.errorResponse(-32601, "Method not found")
+		response.ID = request.ID
+		return response
 	}
 }
 
-func (s *MCPServer) handleToolsList() *MCPResponse {
+func (s *MCPServer) handleToolsList(id interface{}) *MCPResponse {
 	tools := []Tool{
 		{
 			Name:        "list_pull_requests",
@@ -1169,11 +1442,136 @@ func (s *MCPServer) handleToolsList() *MCPResponse {
 				"required": []string{"project_key", "repo_slug", "pull_request_id", "version"},
 			},
 		},
+		{
+			Name:        "get_pull_request_diff",
+			Description: "Get the raw diff for a pull request",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"project_key": map[string]interface{}{
+						"type":        "string",
+						"description": "The project key",
+					},
+					"repo_slug": map[string]interface{}{
+						"type":        "string",
+						"description": "The repository slug",
+					},
+					"pull_request_id": map[string]interface{}{
+						"type":        "integer",
+						"description": "The pull request ID",
+					},
+					"context_lines": map[string]interface{}{
+						"type":        "integer",
+						"description": "Number of context lines around changes (optional)",
+						"minimum":     0,
+					},
+					"whitespace": map[string]interface{}{
+						"type":        "string",
+						"description": "Whitespace handling: 'ignore-all', 'ignore-space-at-eol', 'ignore-space-change', 'ignore-trailing-space' (optional)",
+						"enum":        []string{"ignore-all", "ignore-space-at-eol", "ignore-space-change", "ignore-trailing-space"},
+					},
+					"since": map[string]interface{}{
+						"type":        "string",
+						"description": "Base commit hash to diff from (optional)",
+					},
+					"until": map[string]interface{}{
+						"type":        "string",
+						"description": "End commit hash to diff to (optional)",
+					},
+				},
+				"required": []string{"project_key", "repo_slug", "pull_request_id"},
+			},
+		},
+		{
+			Name:        "create_pull_request_comment",
+			Description: "Add a comment to a pull request",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"project_key": map[string]interface{}{
+						"type":        "string",
+						"description": "The project key",
+					},
+					"repo_slug": map[string]interface{}{
+						"type":        "string",
+						"description": "The repository slug",
+					},
+					"pull_request_id": map[string]interface{}{
+						"type":        "integer",
+						"description": "The pull request ID",
+					},
+					"text": map[string]interface{}{
+						"type":        "string",
+						"description": "The comment text",
+					},
+					"anchor": map[string]interface{}{
+						"type":        "object",
+						"description": "Optional anchor for inline comments",
+						"properties": map[string]interface{}{
+							"line": map[string]interface{}{
+								"type":        "integer",
+								"description": "Line number for inline comment",
+							},
+							"line_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Line type (ADDED, REMOVED, CONTEXT)",
+								"enum":        []string{"ADDED", "REMOVED", "CONTEXT"},
+							},
+							"path": map[string]interface{}{
+								"type":        "string",
+								"description": "File path for inline comment",
+							},
+							"file_type": map[string]interface{}{
+								"type":        "string",
+								"description": "File type (FROM, TO)",
+								"enum":        []string{"FROM", "TO"},
+							},
+							"from_hash": map[string]interface{}{
+								"type":        "string",
+								"description": "Source commit hash",
+							},
+							"to_hash": map[string]interface{}{
+								"type":        "string",
+								"description": "Target commit hash",
+							},
+							"src_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Source file path (for renames)",
+							},
+							"dst_path": map[string]interface{}{
+								"type":        "string",
+								"description": "Destination file path (for renames)",
+							},
+							"orphaned_type": map[string]interface{}{
+								"type":        "string",
+								"description": "Orphaned comment type",
+							},
+						},
+					},
+				},
+				"required": []string{"project_key", "repo_slug", "pull_request_id", "text"},
+			},
+		},
+		{
+			Name:        "hello_world",
+			Description: "Say hello to someone",
+			InputSchema: map[string]interface{}{
+				"type": "object",
+				"properties": map[string]interface{}{
+					"name": map[string]interface{}{
+						"type":        "string",
+						"description": "Name of the person to greet",
+					},
+				},
+				"required": []string{"name"},
+			},
+		},
 	}
 
 	result := ToolListResult{Tools: tools}
 	return &MCPResponse{
 		JSONRPC: "2.0",
+		ID:      id,
 		Result:  result,
 	}
 }
@@ -1196,10 +1594,11 @@ func main() {
 		}
 
 		response := server.handleRequest(&request)
-		response.ID = request.ID
-
-		if err := encoder.Encode(response); err != nil {
-			log.Printf("Error encoding response: %v", err)
+		// Only send response if it's not nil (notifications don't get responses)
+		if response != nil {
+			if err := encoder.Encode(response); err != nil {
+				log.Printf("Error encoding response: %v", err)
+			}
 		}
 	}
 }

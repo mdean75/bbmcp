@@ -7,6 +7,8 @@ A Model Context Protocol (MCP) server that provides tools for interacting with B
 - List pull requests for a repository
 - Get detailed information about specific pull requests
 - View pull request activity (comments, approvals, etc.)
+- Get raw diff for pull requests
+- Add comments to pull requests (general and inline comments)
 - Create new pull requests
 - Approve/unapprove pull requests
 - Merge pull requests
@@ -60,6 +62,37 @@ Get activity for a pull request (comments, approvals, etc.).
 - `project_key` (required): The project key
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
+
+### get_pull_request_diff
+Get the raw diff for a pull request.
+
+**Parameters:**
+- `project_key` (required): The project key
+- `repo_slug` (required): The repository slug
+- `pull_request_id` (required): The pull request ID
+- `context_lines` (optional): Number of context lines around changes
+- `whitespace` (optional): Whitespace handling ('ignore-all', 'ignore-space-at-eol', 'ignore-space-change', 'ignore-trailing-space')
+- `since` (optional): Base commit hash to diff from
+- `until` (optional): End commit hash to diff to
+
+### create_pull_request_comment
+Add a comment to a pull request.
+
+**Parameters:**
+- `project_key` (required): The project key
+- `repo_slug` (required): The repository slug
+- `pull_request_id` (required): The pull request ID
+- `text` (required): The comment text
+- `anchor` (optional): Anchor object for inline comments with properties:
+  - `line`: Line number for inline comment
+  - `line_type`: Line type (ADDED, REMOVED, CONTEXT)
+  - `path`: File path for inline comment
+  - `file_type`: File type (FROM, TO)
+  - `from_hash`: Source commit hash
+  - `to_hash`: Target commit hash
+  - `src_path`: Source file path (for renames)
+  - `dst_path`: Destination file path (for renames)
+  - `orphaned_type`: Orphaned comment type
 
 ### create_pull_request
 Create a new pull request.
