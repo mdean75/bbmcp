@@ -69,6 +69,7 @@ func registerBitbucketTools(s *server.MCPServer, bb *bitbucket.Server) {
 	tools.RegisterCreatePullRequestComment(s, bb)
 
 	tools.RegisterGetRepos(s, bb)
+	tools.RegisterGetPullRequestSettings(s, bb)
 
 	tools.RegisterHelloWorld(s)
 }

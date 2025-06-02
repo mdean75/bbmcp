@@ -337,3 +337,24 @@ func (bs *Server) GetRepos(projectKey string, limit, start int) ([]Repository, e
 
 	return allRepos, nil
 }
+
+func (bs *Server) GetPullRequestSettings(projectKey, repoSlug string) (*PullRequestSettings, error) {
+	endpoint := fmt.Sprintf("/projects/%s/repos/%s/settings/pull-requests", projectKey, repoSlug)
+
+	resp, err := bs.makeRequest("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
+	}
+
+	var settings PullRequestSettings
+	if err := json.NewDecoder(resp.Body).Decode(&settings); err != nil {
+		return nil, err
+	}
+
+	return &settings, nil
+}

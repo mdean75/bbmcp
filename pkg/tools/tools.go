@@ -630,6 +630,46 @@ func RegisterGetRepos(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
+func RegisterGetPullRequestSettings(s *server.MCPServer, bb *bitbucket.Server) {
+	getSettingsTool := mcp.NewTool("get_pull_request_settings",
+		mcp.WithDescription("Get pull request configuration settings for a repository"),
+		mcp.WithString("project_key",
+			mcp.Required(),
+			mcp.Description("The project key"),
+		),
+		mcp.WithString("repo_slug",
+			mcp.Required(),
+			mcp.Description("The repository slug"),
+		),
+	)
+
+	s.AddTool(getSettingsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args := request.GetArguments()
+
+		projectKey, _ := args["project_key"].(string)
+		repoSlug, _ := args["repo_slug"].(string)
+
+		settings, err := bb.GetPullRequestSettings(projectKey, repoSlug)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get pull request settings: %v", err)
+		}
+
+		content, err := json.MarshalIndent(settings, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal response: %v", err)
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: string(content),
+				},
+			},
+		}, nil
+	})
+}
+
 func RegisterHelloWorld(s *server.MCPServer) {
 	helloTool := mcp.NewTool("hello_world",
 		mcp.WithDescription("Say hello to someone"),

@@ -183,3 +183,79 @@ type CommitParent struct {
 	ID        string `json:"id"`
 	DisplayID string `json:"displayId"`
 }
+
+type PullRequestSettings struct {
+	MergeConfig              *MergeConfig `json:"mergeConfig,omitempty"`
+	RequiredApprovers        int          `json:"requiredApprovers,omitempty"`
+	RequiredAllApprovers     bool         `json:"requiredAllApprovers,omitempty"`
+	RequiredAllTasksComplete bool         `json:"requiredAllTasksComplete,omitempty"`
+	RequiredSuccessfulBuilds int          `json:"requiredSuccessfulBuilds,omitempty"`
+	NeedsWork                bool         `json:"needsWork,omitempty"`
+	// Plugin-specific settings with namespaced keys
+	RequiredApproversHook *HookConfig `json:"com.atlassian.bitbucket.server.bitbucket-bundled-hooks:requiredApprovers,omitempty"`
+	RequiredBuildsHook    *HookConfig `json:"com.atlassian.bitbucket.server.bitbucket-build:requiredBuilds,omitempty"`
+}
+
+type RequiredApprovalPath struct {
+	ID                int     `json:"id"`
+	Path              string  `json:"path"`
+	RequiredApprovals int     `json:"requiredApprovals"`
+	Users             []User  `json:"users"`
+	Groups            []Group `json:"groups"`
+}
+
+type DefaultReviewer struct {
+	ID                int        `json:"id"`
+	SourceRefMatcher  RefMatcher `json:"sourceRefMatcher"`
+	TargetRefMatcher  RefMatcher `json:"targetRefMatcher"`
+	Reviewers         []User     `json:"reviewers"`
+	RequiredApprovals int        `json:"requiredApprovals"`
+}
+
+type RefMatcher struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Active    bool   `json:"active"`
+	DisplayID string `json:"displayId"`
+}
+
+type MergeConfig struct {
+	CommitSummaries int             `json:"commitSummaries"`
+	DefaultStrategy MergeStrategy   `json:"defaultStrategy"`
+	Strategies      []MergeStrategy `json:"strategies"`
+	Type            string          `json:"type"`
+}
+
+type MergeStrategy struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Enabled     bool   `json:"enabled"`
+	Flag        string `json:"flag"`
+}
+
+type HookConfig struct {
+	Enable bool `json:"enable"`
+	Count  int  `json:"count"`
+}
+
+type RequiredReviewerGroup struct {
+	ID                int        `json:"id"`
+	Name              string     `json:"name"`
+	RequiredApprovals int        `json:"requiredApprovals"`
+	SourceRefMatcher  RefMatcher `json:"sourceRefMatcher"`
+	TargetRefMatcher  RefMatcher `json:"targetRefMatcher"`
+}
+
+type Group struct {
+	Name string `json:"name"`
+}
+
+type BranchPermission struct {
+	ID         int        `json:"id"`
+	Type       string     `json:"type"`
+	Matcher    RefMatcher `json:"matcher"`
+	Users      []User     `json:"users"`
+	Groups     []Group    `json:"groups"`
+	AccessKeys []string   `json:"accessKeys"`
+}
