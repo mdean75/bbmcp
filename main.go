@@ -1,38 +1,70 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
 	"log"
 	"os"
+	"strings"
 
-	"bbcli/pkg/server"
-	"bbcli/pkg/types"
+	"bbcli/pkg/bitbucket"
+	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
-	mcpServer := server.NewMCPServer()
+	mcpServer := NewMCPServer()
 
-	// Read from stdin and write to stdout (STDIO transport)
-	decoder := json.NewDecoder(os.Stdin)
-	encoder := json.NewEncoder(os.Stdout)
-
-	for {
-		var request types.MCPRequest
-		if err := decoder.Decode(&request); err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.Printf("Error decoding request: %v", err)
-			continue
-		}
-
-		response := mcpServer.HandleRequest(&request)
-		// Only send response if it's not nil (notifications don't get responses)
-		if response != nil {
-			if err := encoder.Encode(response); err != nil {
-				log.Printf("Error encoding response: %v", err)
-			}
-		}
+	if err := server.ServeStdio(mcpServer); err != nil {
+		log.Fatalf("Server error: %v", err)
 	}
+}
+
+func NewMCPServer() *server.MCPServer {
+	config := getBitbucketConfig()
+	bbClient := bitbucket.NewServer(config)
+
+	s := server.NewMCPServer(
+		"bbcli",
+		"1.0.0",
+		server.WithToolCapabilities(true),
+	)
+
+	registerBitbucketTools(s, bbClient)
+	return s
+}
+
+func getBitbucketConfig() *bitbucket.Config {
+	config := &bitbucket.Config{
+		BaseURL:  os.Getenv("BITBUCKET_BASE_URL"),
+		Username: os.Getenv("BITBUCKET_USERNAME"),
+		Password: os.Getenv("BITBUCKET_PASSWORD"),
+	}
+
+	var missing []string
+	if config.BaseURL == "" {
+		missing = append(missing, "BITBUCKET_BASE_URL")
+	}
+	if config.Username == "" {
+		missing = append(missing, "BITBUCKET_USERNAME")
+	}
+	if config.Password == "" {
+		missing = append(missing, "BITBUCKET_PASSWORD")
+	}
+	if len(missing) > 0 {
+		log.Fatalf("Missing required environment variables: %s", strings.Join(missing, ", "))
+	}
+
+	return config
+}
+
+func registerBitbucketTools(s *server.MCPServer, bb *bitbucket.Server) {
+	registerListPullRequestsTool(s, bb)
+	registerGetPullRequestTool(s, bb)
+	registerGetPullRequestActivityTool(s, bb)
+	registerCreatePullRequestTool(s, bb)
+	registerApprovePullRequestTool(s, bb)
+	registerUnapprovePullRequestTool(s, bb)
+	registerMergePullRequestTool(s, bb)
+	registerDeclinePullRequestTool(s, bb)
+	registerGetPullRequestDiffTool(s, bb)
+	registerCreatePullRequestCommentTool(s, bb)
+	registerHelloWorldTool(s)
 }
