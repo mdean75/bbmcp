@@ -105,4 +105,4 @@ go.work.sum
 .env
 
 # additional custom files
-bbcli
+./bbcli

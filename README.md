@@ -1,29 +1,31 @@
 # Bitbucket MCP Server
 
-A Model Context Protocol (MCP) server that provides tools for interacting with Bitbucket Server pull requests.
+A Model Context Protocol (MCP) server that provides tools for interacting with Bitbucket Server pull requests. Built using the [mcp-go](https://github.com/mark3labs/mcp-go) library.
 
 ## Project Structure
 
-The project is organized into the following packages for better maintainability:
+The project is organized for simplicity and maintainability:
 
 ```
 bbcli/
-├── main.go                     # Application entry point
+├── main.go                     # Application entry point and server setup
+├── tools.go                    # Tool registrations and handlers  
 ├── pkg/
-│   ├── types/                  # MCP protocol types
-│   │   └── mcp.go             # MCP request/response structures
-│   ├── bitbucket/             # Bitbucket API client
-│   │   ├── types.go           # Bitbucket API data structures
-│   │   └── client.go          # HTTP client for Bitbucket Server API
-│   └── server/                # MCP server implementation
-│       ├── server.go          # Main server struct and initialization
-│       ├── handlers.go        # Tool handler implementations
-│       └── tools.go           # Tool definitions and request routing
+│   └── bitbucket/             # Bitbucket API client
+│       ├── types.go           # Bitbucket API data structures
+│       └── client.go          # HTTP client for Bitbucket Server API
 ├── go.mod
 └── README.md
 ```
 
-## Features
+## Key Features
+
+- **Framework-based**: Uses mcp-go library for robust MCP protocol handling
+- **Automatic versioning**: Merge/decline operations automatically fetch current PR versions to prevent conflicts
+- **Type-safe**: Leverages mcp-go's type-safe tool definitions and parameter validation
+- **Clean separation**: Bitbucket API logic separated from MCP server concerns
+
+## Tools Available
 
 - List pull requests for a repository
 - Get detailed information about specific pull requests
@@ -32,8 +34,8 @@ bbcli/
 - Add comments to pull requests (general and inline comments)
 - Create new pull requests
 - Approve/unapprove pull requests
-- Merge pull requests
-- Decline pull requests
+- Merge pull requests (with automatic version handling)
+- Decline pull requests (with automatic version handling)
 
 ## Environment Variables
 
@@ -104,7 +106,7 @@ Add a comment to a pull request.
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 - `text` (required): The comment text
-- `anchor` (optional): Anchor object for inline comments with properties:
+- `anchor_json` (optional): JSON-encoded anchor object for inline comments with properties:
   - `line`: Line number for inline comment
   - `line_type`: Line type (ADDED, REMOVED, CONTEXT)
   - `path`: File path for inline comment
@@ -126,7 +128,6 @@ Create a new pull request.
 - `from_branch` (required): Source branch name
 - `to_branch` (required): Target branch name
 - `description` (optional): The pull request description
-- `reviewers` (optional): Array of reviewer usernames
 
 ### approve_pull_request
 Approve a pull request.
@@ -145,26 +146,31 @@ Remove approval from a pull request.
 - `pull_request_id` (required): The pull request ID
 
 ### merge_pull_request
-Merge a pull request.
+Merge a pull request (automatically fetches current version for optimistic locking).
 
 **Parameters:**
 - `project_key` (required): The project key
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
-- `version` (required): The pull request version for optimistic locking
 
 ### decline_pull_request
-Decline a pull request.
+Decline a pull request (automatically fetches current version for optimistic locking).
 
 **Parameters:**
 - `project_key` (required): The project key
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
-- `version` (required): The pull request version for optimistic locking
 
 ## Usage with MCP Clients
 
 This server communicates via STDIO using the Model Context Protocol. It can be used with any MCP-compatible client such as Claude Desktop or VS Code with MCP support.
+
+## Implementation Notes
+
+- **Built with mcp-go**: Uses the official mcp-go library for robust MCP protocol implementation
+- **Automatic version management**: Merge and decline operations automatically fetch the current PR version to prevent optimistic locking conflicts
+- **Simplified anchor handling**: Inline comment anchors are passed as JSON strings for easier client integration
+- **Error handling**: Comprehensive error handling with descriptive messages
 
 ## Security
 
