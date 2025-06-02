@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
-func registerListPullRequestsTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterListPullRequests(s *server.MCPServer, bb *bitbucket.Server) {
 	listPRTool := mcp.NewTool("list_pull_requests",
 		mcp.WithDescription("List pull requests for a repository"),
 		mcp.WithString("project_key",
@@ -63,7 +63,7 @@ func registerListPullRequestsTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerGetPullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterGetPullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	getPRTool := mcp.NewTool("get_pull_request",
 		mcp.WithDescription("Get details of a specific pull request"),
 		mcp.WithString("project_key",
@@ -108,7 +108,7 @@ func registerGetPullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerGetPullRequestActivityTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterGetPullRequestActivity(s *server.MCPServer, bb *bitbucket.Server) {
 	getActivityTool := mcp.NewTool("get_pull_request_activity",
 		mcp.WithDescription("Get activity (comments, approvals, etc.) for a pull request"),
 		mcp.WithString("project_key",
@@ -153,7 +153,7 @@ func registerGetPullRequestActivityTool(s *server.MCPServer, bb *bitbucket.Serve
 	})
 }
 
-func registerCreatePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterCreatePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	createPRTool := mcp.NewTool("create_pull_request",
 		mcp.WithDescription("Create a new pull request"),
 		mcp.WithString("project_key",
@@ -236,7 +236,7 @@ func registerCreatePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerApprovePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterApprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	approveTool := mcp.NewTool("approve_pull_request",
 		mcp.WithDescription("Approve a pull request"),
 		mcp.WithString("project_key",
@@ -276,7 +276,7 @@ func registerApprovePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerUnapprovePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterUnapprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	unapproveTool := mcp.NewTool("unapprove_pull_request",
 		mcp.WithDescription("Remove approval from a pull request"),
 		mcp.WithString("project_key",
@@ -316,7 +316,7 @@ func registerUnapprovePullRequestTool(s *server.MCPServer, bb *bitbucket.Server)
 	})
 }
 
-func registerMergePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterMergePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	mergeTool := mcp.NewTool("merge_pull_request",
 		mcp.WithDescription("Merge a pull request (automatically fetches current version for optimistic locking)"),
 		mcp.WithString("project_key",
@@ -367,7 +367,7 @@ func registerMergePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerDeclinePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterDeclinePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	declineTool := mcp.NewTool("decline_pull_request",
 		mcp.WithDescription("Decline a pull request (automatically fetches current version for optimistic locking)"),
 		mcp.WithString("project_key",
@@ -418,7 +418,7 @@ func registerDeclinePullRequestTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerGetPullRequestDiffTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterGetPullRequestDiff(s *server.MCPServer, bb *bitbucket.Server) {
 	getDiffTool := mcp.NewTool("get_pull_request_diff",
 		mcp.WithDescription("Get the raw diff for a pull request"),
 		mcp.WithString("project_key",
@@ -481,7 +481,7 @@ func registerGetPullRequestDiffTool(s *server.MCPServer, bb *bitbucket.Server) {
 	})
 }
 
-func registerCreatePullRequestCommentTool(s *server.MCPServer, bb *bitbucket.Server) {
+func RegisterCreatePullRequestComment(s *server.MCPServer, bb *bitbucket.Server) {
 	commentTool := mcp.NewTool("create_pull_request_comment",
 		mcp.WithDescription("Add a comment to a pull request"),
 		mcp.WithString("project_key",
@@ -578,7 +578,7 @@ func registerCreatePullRequestCommentTool(s *server.MCPServer, bb *bitbucket.Ser
 	})
 }
 
-func registerHelloWorldTool(s *server.MCPServer) {
+func RegisterHelloWorld(s *server.MCPServer) {
 	helloTool := mcp.NewTool("hello_world",
 		mcp.WithDescription("Say hello to someone"),
 		mcp.WithString("name",
