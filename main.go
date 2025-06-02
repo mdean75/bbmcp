@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strings"
 
 	"bbcli/pkg/bitbucket"
 	"github.com/mark3labs/mcp-go/server"
@@ -37,8 +38,18 @@ func getBitbucketConfig() *bitbucket.Config {
 		Password: os.Getenv("BITBUCKET_PASSWORD"),
 	}
 
-	if config.BaseURL == "" || config.Username == "" || config.Password == "" {
-		log.Fatal("Missing required environment variables: BITBUCKET_BASE_URL, BITBUCKET_USERNAME, BITBUCKET_PASSWORD")
+	var missing []string
+	if config.BaseURL == "" {
+		missing = append(missing, "BITBUCKET_BASE_URL")
+	}
+	if config.Username == "" {
+		missing = append(missing, "BITBUCKET_USERNAME")
+	}
+	if config.Password == "" {
+		missing = append(missing, "BITBUCKET_PASSWORD")
+	}
+	if len(missing) > 0 {
+		log.Fatalf("Missing required environment variables: %s", strings.Join(missing, ", "))
 	}
 
 	return config
