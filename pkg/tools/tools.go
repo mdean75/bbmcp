@@ -578,6 +578,58 @@ func RegisterCreatePullRequestComment(s *server.MCPServer, bb *bitbucket.Server)
 	})
 }
 
+func RegisterGetRepos(s *server.MCPServer, bb *bitbucket.Server) {
+	getReposTool := mcp.NewTool("get_repos",
+		mcp.WithDescription("Get a list of repositories in a project"),
+		mcp.WithString("project_key",
+			mcp.Required(),
+			mcp.Description("The project key"),
+		),
+		mcp.WithNumber("limit",
+			mcp.Description("Maximum number of results to return (default is 25)"),
+			mcp.DefaultNumber(25),
+		),
+		mcp.WithNumber("start",
+			mcp.Description("Starting index for pagination (default is 0)"),
+			mcp.DefaultNumber(0),
+		),
+	)
+
+	s.AddTool(getReposTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args := request.GetArguments()
+
+		projectKey, _ := args["project_key"].(string)
+		limit := 25
+		if limitVal, ok := args["limit"].(float64); ok {
+			limit = int(limitVal)
+		}
+
+		start := 0
+		if startVal, ok := args["start"].(float64); ok {
+			start = int(startVal)
+		}
+
+		repos, err := bb.GetRepos(projectKey, limit, start)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get repositories: %v", err)
+		}
+
+		content, err := json.MarshalIndent(repos, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal response: %v", err)
+		}
+
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: string(content),
+				},
+			},
+		}, nil
+	})
+}
+
 func RegisterHelloWorld(s *server.MCPServer) {
 	helloTool := mcp.NewTool("hello_world",
 		mcp.WithDescription("Say hello to someone"),

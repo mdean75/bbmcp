@@ -297,3 +297,43 @@ func (bs *Server) CreatePullRequestComment(projectKey, repoSlug string, pullRequ
 
 	return &comment, nil
 }
+
+type RepositoryResponse struct {
+	Size       int          `json:"size"`
+	Limit      int          `json:"limit"`
+	IsLastPage bool         `json:"isLastPage"`
+	Values     []Repository `json:"values"`
+	Start      int          `json:"start"`
+}
+
+func (bs *Server) GetRepos(projectKey string, limit, start int) ([]Repository, error) {
+	var allRepos []Repository
+
+	for {
+		endpoint := fmt.Sprintf("/projects/%s/repos?start=%d&limit=%d", projectKey, start, limit)
+
+		resp, err := bs.makeRequest("GET", endpoint, nil)
+		if err != nil {
+			return nil, err
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("API request failed with status %d", resp.StatusCode)
+		}
+
+		var pageResponse RepositoryResponse
+		if err := json.NewDecoder(resp.Body).Decode(&pageResponse); err != nil {
+			return nil, err
+		}
+
+		allRepos = append(allRepos, pageResponse.Values...)
+
+		if pageResponse.IsLastPage {
+			break
+		}
+		start = start + pageResponse.Limit
+	}
+
+	return allRepos, nil
+}
