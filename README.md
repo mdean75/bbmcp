@@ -165,6 +165,32 @@ Decline a pull request (automatically fetches current version for optimistic loc
 
 This server communicates via STDIO using the Model Context Protocol. It can be used with any MCP-compatible client such as Claude Desktop or VS Code with MCP support.
 
+### Example Claude Desktop Configuration
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allow"
+      ]
+    },
+    "bbcli": {
+      "command": "/Users/mdeangelo/projects/bbcli/bbcli",
+      "args": [],
+      "env": {
+        "BITBUCKET_BASE_URL": "http://localhost:7990",
+        "BITBUCKET_USERNAME": "",
+        "BITBUCKET_PASSWORD": ""
+      }
+    }
+  }
+}
+```
+
 ## Implementation Notes
 
 - **Built with mcp-go**: Uses the official mcp-go library for robust MCP protocol implementation

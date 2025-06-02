@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"bbcli/pkg/bitbucket"
+	"bbcli/pkg/tools"
 	"github.com/mark3labs/mcp-go/server"
 )
 
@@ -56,15 +57,15 @@ func getBitbucketConfig() *bitbucket.Config {
 }
 
 func registerBitbucketTools(s *server.MCPServer, bb *bitbucket.Server) {
-	registerListPullRequestsTool(s, bb)
-	registerGetPullRequestTool(s, bb)
-	registerGetPullRequestActivityTool(s, bb)
-	registerCreatePullRequestTool(s, bb)
-	registerApprovePullRequestTool(s, bb)
-	registerUnapprovePullRequestTool(s, bb)
-	registerMergePullRequestTool(s, bb)
-	registerDeclinePullRequestTool(s, bb)
-	registerGetPullRequestDiffTool(s, bb)
-	registerCreatePullRequestCommentTool(s, bb)
-	registerHelloWorldTool(s)
+	tools.RegisterListPullRequests(s, bb)
+	tools.RegisterGetPullRequest(s, bb)
+	tools.RegisterGetPullRequestActivity(s, bb)
+	tools.RegisterCreatePullRequest(s, bb)
+	tools.RegisterApprovePullRequest(s, bb)
+	tools.RegisterUnapprovePullRequest(s, bb)
+	tools.RegisterMergePullRequest(s, bb)
+	tools.RegisterDeclinePullRequest(s, bb)
+	tools.RegisterGetPullRequestDiff(s, bb)
+	tools.RegisterCreatePullRequestComment(s, bb)
+	tools.RegisterHelloWorld(s)
 }
