@@ -36,6 +36,8 @@ bbcli/
 - Approve/unapprove pull requests
 - Merge pull requests (with automatic version handling)
 - Decline pull requests (with automatic version handling)
+- List repositories in a project
+- Get pull request configuration settings
 
 ## Environment Variables
 
@@ -45,7 +47,27 @@ Set the following environment variables:
 export BITBUCKET_BASE_URL="https://your-bitbucket-server.com"
 export BITBUCKET_USERNAME="your-username"
 export BITBUCKET_PASSWORD="your-app-password"
+# OR use a token instead of username/password
+export BITBUCKET_TOKEN="your-personal-access-token"
+
+# Optional: Set a default project key to avoid specifying it in every tool call
+export BITBUCKET_DEFAULT_PROJECT_KEY="MYPROJ"
 ```
+
+### Authentication Options
+
+You can authenticate using either:
+1. **Username and Password/App Password**: Set both `BITBUCKET_USERNAME` and `BITBUCKET_PASSWORD`
+2. **Personal Access Token**: Set `BITBUCKET_TOKEN` (preferred for security)
+
+### Default Project Key
+
+When `BITBUCKET_DEFAULT_PROJECT_KEY` is set, all tools that require a `project_key` parameter will use this default value when the parameter is not explicitly provided. This simplifies usage when working primarily with repositories in a single project.
+
+**Benefits:**
+- Reduces repetitive parameter specification
+- Maintains backward compatibility - explicit `project_key` parameters still work
+- Clear error messages when no project key is available
 
 ## Build and Run
 
@@ -65,7 +87,7 @@ The server provides the following MCP tools:
 List pull requests for a repository.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `state` (optional): Filter by state (OPEN, MERGED, DECLINED)
 - `limit` (optional): Maximum number of results (1-100, default: 25)
@@ -74,7 +96,7 @@ List pull requests for a repository.
 Get details of a specific pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 
@@ -82,7 +104,7 @@ Get details of a specific pull request.
 Get activity for a pull request (comments, approvals, etc.).
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 
@@ -90,7 +112,7 @@ Get activity for a pull request (comments, approvals, etc.).
 Get the raw diff for a pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 - `context_lines` (optional): Number of context lines around changes
@@ -102,7 +124,7 @@ Get the raw diff for a pull request.
 Add a comment to a pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 - `text` (required): The comment text
@@ -122,7 +144,7 @@ Add a comment to a pull request.
 Create a new pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `title` (required): The pull request title
 - `from_branch` (required): Source branch name
@@ -133,7 +155,7 @@ Create a new pull request.
 Approve a pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 
@@ -141,7 +163,7 @@ Approve a pull request.
 Remove approval from a pull request.
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 
@@ -149,7 +171,7 @@ Remove approval from a pull request.
 Merge a pull request (automatically fetches current version for optimistic locking).
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
 
@@ -157,9 +179,24 @@ Merge a pull request (automatically fetches current version for optimistic locki
 Decline a pull request (automatically fetches current version for optimistic locking).
 
 **Parameters:**
-- `project_key` (required): The project key
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
 - `repo_slug` (required): The repository slug
 - `pull_request_id` (required): The pull request ID
+
+### get_repos
+Get a list of repositories in a project.
+
+**Parameters:**
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
+- `limit` (optional): Maximum number of results to return (default: 25)
+- `start` (optional): Starting index for pagination (default: 0)
+
+### get_pull_request_settings
+Get pull request configuration settings for a repository.
+
+**Parameters:**
+- `project_key` (optional): The project key (uses default if BITBUCKET_DEFAULT_PROJECT_KEY is set)
+- `repo_slug` (required): The repository slug
 
 ## Usage with MCP Clients
 
@@ -183,8 +220,9 @@ This server communicates via STDIO using the Model Context Protocol. It can be u
       "args": [],
       "env": {
         "BITBUCKET_BASE_URL": "http://localhost:7990",
-        "BITBUCKET_USERNAME": "",
-        "BITBUCKET_PASSWORD": ""
+        "BITBUCKET_USERNAME": "your-username",
+        "BITBUCKET_PASSWORD": "your-app-password",
+        "BITBUCKET_DEFAULT_PROJECT_KEY": "MYPROJ"
       }
     }
   }
