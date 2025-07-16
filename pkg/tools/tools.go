@@ -10,12 +10,27 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+// getProjectKey returns the project key from args or falls back to the default from config
+func getProjectKey(args map[string]interface{}, bb *bitbucket.Server) (string, error) {
+	// Try to get explicit project_key from args
+	if projectKey, ok := args["project_key"].(string); ok && projectKey != "" {
+		return projectKey, nil
+	}
+	
+	// Fall back to default project key from config
+	defaultKey := bb.GetDefaultProjectKey()
+	if defaultKey == "" {
+		return "", fmt.Errorf("no project_key provided and no default project key configured. Set BITBUCKET_DEFAULT_PROJECT_KEY environment variable or provide project_key parameter")
+	}
+	
+	return defaultKey, nil
+}
+
 func RegisterListPullRequests(s *server.MCPServer, bb *bitbucket.Server) {
 	listPRTool := mcp.NewTool("list_pull_requests",
 		mcp.WithDescription("List pull requests for a repository"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -33,7 +48,10 @@ func RegisterListPullRequests(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(listPRTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		state, _ := args["state"].(string)
 
@@ -67,8 +85,7 @@ func RegisterGetPullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	getPRTool := mcp.NewTool("get_pull_request",
 		mcp.WithDescription("Get details of a specific pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -83,7 +100,10 @@ func RegisterGetPullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(getPRTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
@@ -112,8 +132,7 @@ func RegisterGetPullRequestActivity(s *server.MCPServer, bb *bitbucket.Server) {
 	getActivityTool := mcp.NewTool("get_pull_request_activity",
 		mcp.WithDescription("Get activity (comments, approvals, etc.) for a pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -128,7 +147,10 @@ func RegisterGetPullRequestActivity(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(getActivityTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
@@ -157,8 +179,7 @@ func RegisterCreatePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	createPRTool := mcp.NewTool("create_pull_request",
 		mcp.WithDescription("Create a new pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -184,7 +205,10 @@ func RegisterCreatePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(createPRTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		title, _ := args["title"].(string)
 		fromBranch, _ := args["from_branch"].(string)
@@ -240,8 +264,7 @@ func RegisterApprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	approveTool := mcp.NewTool("approve_pull_request",
 		mcp.WithDescription("Approve a pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -256,11 +279,14 @@ func RegisterApprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(approveTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
-		err := bb.ApprovePullRequest(projectKey, repoSlug, int(pullRequestID))
+		err = bb.ApprovePullRequest(projectKey, repoSlug, int(pullRequestID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to approve pull request: %v", err)
 		}
@@ -280,8 +306,7 @@ func RegisterUnapprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	unapproveTool := mcp.NewTool("unapprove_pull_request",
 		mcp.WithDescription("Remove approval from a pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -296,11 +321,14 @@ func RegisterUnapprovePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(unapproveTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
-		err := bb.UnapprovalPullRequest(projectKey, repoSlug, int(pullRequestID))
+		err = bb.UnapprovalPullRequest(projectKey, repoSlug, int(pullRequestID))
 		if err != nil {
 			return nil, fmt.Errorf("failed to unapprove pull request: %v", err)
 		}
@@ -320,8 +348,7 @@ func RegisterMergePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	mergeTool := mcp.NewTool("merge_pull_request",
 		mcp.WithDescription("Merge a pull request (automatically fetches current version for optimistic locking)"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -336,7 +363,10 @@ func RegisterMergePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(mergeTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
@@ -371,8 +401,7 @@ func RegisterDeclinePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	declineTool := mcp.NewTool("decline_pull_request",
 		mcp.WithDescription("Decline a pull request (automatically fetches current version for optimistic locking)"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -387,7 +416,10 @@ func RegisterDeclinePullRequest(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(declineTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
@@ -422,8 +454,7 @@ func RegisterGetPullRequestDiff(s *server.MCPServer, bb *bitbucket.Server) {
 	getDiffTool := mcp.NewTool("get_pull_request_diff",
 		mcp.WithDescription("Get the raw diff for a pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -451,7 +482,10 @@ func RegisterGetPullRequestDiff(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(getDiffTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 
@@ -485,8 +519,7 @@ func RegisterCreatePullRequestComment(s *server.MCPServer, bb *bitbucket.Server)
 	commentTool := mcp.NewTool("create_pull_request_comment",
 		mcp.WithDescription("Add a comment to a pull request"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -508,7 +541,10 @@ func RegisterCreatePullRequestComment(s *server.MCPServer, bb *bitbucket.Server)
 	s.AddTool(commentTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 		pullRequestID, _ := args["pull_request_id"].(float64)
 		text, _ := args["text"].(string)
@@ -582,8 +618,7 @@ func RegisterGetRepos(s *server.MCPServer, bb *bitbucket.Server) {
 	getReposTool := mcp.NewTool("get_repos",
 		mcp.WithDescription("Get a list of repositories in a project"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithNumber("limit",
 			mcp.Description("Maximum number of results to return (default is 25)"),
@@ -598,7 +633,10 @@ func RegisterGetRepos(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(getReposTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		limit := 25
 		if limitVal, ok := args["limit"].(float64); ok {
 			limit = int(limitVal)
@@ -634,8 +672,7 @@ func RegisterGetPullRequestSettings(s *server.MCPServer, bb *bitbucket.Server) {
 	getSettingsTool := mcp.NewTool("get_pull_request_settings",
 		mcp.WithDescription("Get pull request configuration settings for a repository"),
 		mcp.WithString("project_key",
-			mcp.Required(),
-			mcp.Description("The project key"),
+			mcp.Description("The project key (optional if BITBUCKET_DEFAULT_PROJECT_KEY is set)"),
 		),
 		mcp.WithString("repo_slug",
 			mcp.Required(),
@@ -646,7 +683,10 @@ func RegisterGetPullRequestSettings(s *server.MCPServer, bb *bitbucket.Server) {
 	s.AddTool(getSettingsTool, func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		args := request.GetArguments()
 
-		projectKey, _ := args["project_key"].(string)
+		projectKey, err := getProjectKey(args, bb)
+		if err != nil {
+			return nil, err
+		}
 		repoSlug, _ := args["repo_slug"].(string)
 
 		settings, err := bb.GetPullRequestSettings(projectKey, repoSlug)

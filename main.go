@@ -34,21 +34,22 @@ func NewMCPServer() *server.MCPServer {
 
 func getBitbucketConfig() *bitbucket.Config {
 	config := &bitbucket.Config{
-		BaseURL:  os.Getenv("BITBUCKET_BASE_URL"),
-		Username: os.Getenv("BITBUCKET_USERNAME"),
-		Password: os.Getenv("BITBUCKET_PASSWORD"),
+		BaseURL:           os.Getenv("BITBUCKET_BASE_URL"),
+		Username:          os.Getenv("BITBUCKET_USERNAME"),
+		Password:          os.Getenv("BITBUCKET_PASSWORD"),
+		Token:             os.Getenv("BITBUCKET_TOKEN"),
+		DefaultProjectKey: os.Getenv("BITBUCKET_DEFAULT_PROJECT_KEY"),
 	}
 
 	var missing []string
 	if config.BaseURL == "" {
 		missing = append(missing, "BITBUCKET_BASE_URL")
 	}
-	if config.Username == "" {
-		missing = append(missing, "BITBUCKET_USERNAME")
+
+	if config.Token == "" && (config.Username == "" || config.Password == "") {
+		missing = append(missing, "BITBUCKET_TOKEN or both BITBUCKET_USERNAME and BITBUCKET_PASSWORD")
 	}
-	if config.Password == "" {
-		missing = append(missing, "BITBUCKET_PASSWORD")
-	}
+
 	if len(missing) > 0 {
 		log.Fatalf("Missing required environment variables: %s", strings.Join(missing, ", "))
 	}

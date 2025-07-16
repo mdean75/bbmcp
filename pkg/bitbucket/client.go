@@ -22,6 +22,11 @@ func NewServer(config *Config) *Server {
 	}
 }
 
+// GetDefaultProjectKey returns the default project key from config
+func (bs *Server) GetDefaultProjectKey() string {
+	return bs.config.DefaultProjectKey
+}
+
 func (bs *Server) makeRequest(method, endpoint string, body io.Reader) (*http.Response, error) {
 	url := fmt.Sprintf("%s/rest/api/1.0%s", bs.config.BaseURL, endpoint)
 	req, err := http.NewRequest(method, url, body)
@@ -29,7 +34,13 @@ func (bs *Server) makeRequest(method, endpoint string, body io.Reader) (*http.Re
 		return nil, err
 	}
 
-	req.SetBasicAuth(bs.config.Username, bs.config.Password)
+	// use Bearer token if provided, otherwise use basic auth
+	if bs.config.Token != "" {
+		req.Header.Set("Authorization", "Bearer "+bs.config.Token)
+	} else {
+		req.SetBasicAuth(bs.config.Username, bs.config.Password)
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 

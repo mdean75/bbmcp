@@ -2,9 +2,11 @@ package bitbucket
 
 // Configuration for Bitbucket Server API
 type Config struct {
-	BaseURL  string
-	Username string
-	Password string // App password or personal access token
+	BaseURL           string
+	Username          string
+	Password          string // App password or personal access token
+	Token             string
+	DefaultProjectKey string
 }
 
 // Bitbucket API structures
