@@ -71,12 +71,29 @@ When `BITBUCKET_DEFAULT_PROJECT_KEY` is set, all tools that require a `project_k
 
 ## Build and Run
 
+### Native Build
+
 ```bash
 # Build the project
 go build -o bbcli
 
 # Run the MCP server
 ./bbcli
+```
+
+### Docker Build
+
+```bash
+# Build the Docker image
+docker build -t bbcli-mcp .
+
+# Run with Docker (for testing)
+docker run --rm \
+  -e BITBUCKET_BASE_URL="https://your-bitbucket-server.com" \
+  -e BITBUCKET_USERNAME="your-username" \
+  -e BITBUCKET_PASSWORD="your-app-password" \
+  -e BITBUCKET_DEFAULT_PROJECT_KEY="MYPROJ" \
+  bbcli-mcp
 ```
 
 ## MCP Tools
@@ -204,6 +221,8 @@ This server communicates via STDIO using the Model Context Protocol. It can be u
 
 ### Example Claude Desktop Configuration
 
+#### Native Binary Configuration
+
 ```json
 {
   "mcpServers": {
@@ -224,6 +243,62 @@ This server communicates via STDIO using the Model Context Protocol. It can be u
         "BITBUCKET_PASSWORD": "your-app-password",
         "BITBUCKET_DEFAULT_PROJECT_KEY": "MYPROJ"
       }
+    }
+  }
+}
+```
+
+#### Docker Configuration
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/allow"
+      ]
+    },
+    "bbcli-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--init",
+        "-e", "BITBUCKET_BASE_URL=https://your-bitbucket-server.com",
+        "-e", "BITBUCKET_USERNAME=your-username", 
+        "-e", "BITBUCKET_PASSWORD=your-app-password",
+        "-e", "BITBUCKET_DEFAULT_PROJECT_KEY=MYPROJ",
+        "bbcli-mcp"
+      ]
+    }
+  }
+}
+```
+
+#### VS Code with MCP Extension Configuration
+
+For VS Code with MCP extension support, add to your settings.json:
+
+```json
+{
+  "mcp.servers": {
+    "bbcli-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--init",
+        "-e", "BITBUCKET_BASE_URL=https://your-bitbucket-server.com",
+        "-e", "BITBUCKET_USERNAME=your-username",
+        "-e", "BITBUCKET_PASSWORD=your-app-password", 
+        "-e", "BITBUCKET_DEFAULT_PROJECT_KEY=MYPROJ",
+        "bbcli-mcp"
+      ]
     }
   }
 }
